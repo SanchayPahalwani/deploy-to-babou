@@ -66,7 +66,12 @@ export class RestTransport implements DraftTransport {
     return this.calls;
   }
 
-  private async req(method: string, path: string, body?: unknown): Promise<any> {
+  // `retry` is only safe for idempotent requests. We auto-retry GETs; writes
+  // (POST) are NOT retried, because a 5xx after the server already committed
+  // would otherwise silently create a duplicate project/chapter — which would
+  // break the very idempotency this pipeline promises. A failed write surfaces
+  // loudly and is recoverable on the next run.
+  private async req(method: string, path: string, body?: unknown, retry = true): Promise<any> {
     let lastErr: unknown;
     for (let attempt = 0; attempt <= this.maxRetries; attempt++) {
       const ctrl = new AbortController();
@@ -83,7 +88,7 @@ export class RestTransport implements DraftTransport {
         });
         if (res.ok) return await safeJson(res);
 
-        if (RETRYABLE.has(res.status) && attempt < this.maxRetries) {
+        if (retry && RETRYABLE.has(res.status) && attempt < this.maxRetries) {
           await sleep(this.backoffMs * 2 ** attempt);
           continue;
         }
@@ -96,11 +101,12 @@ export class RestTransport implements DraftTransport {
       } catch (err) {
         lastErr = err;
         if (err instanceof BabouApiError) throw err;
-        // network/abort error: retry if attempts remain
-        if (attempt < this.maxRetries) {
+        // network/abort error: retry only if this request is retryable
+        if (retry && attempt < this.maxRetries) {
           await sleep(this.backoffMs * 2 ** attempt);
           continue;
         }
+        throw err;
       } finally {
         clearTimeout(timer);
       }
@@ -123,13 +129,13 @@ export class RestTransport implements DraftTransport {
 
   async createProject(input: { name: string; description: string }): Promise<{ id: string }> {
     this.calls.push({ tool: "CreateProject", args: input });
-    const data = await this.req("POST", "/projects", input);
+    const data = await this.req("POST", "/projects", input, false);
     return { id: data.id };
   }
 
   async addChapter(projectId: string, input: { name: string; duration: number }): Promise<{ id: string }> {
     this.calls.push({ tool: "AddChapter", args: { projectId, ...input } });
-    const data = await this.req("POST", `/projects/${projectId}/chapters`, input);
+    const data = await this.req("POST", `/projects/${projectId}/chapters`, input, false);
     return { id: data.id };
   }
 
@@ -139,7 +145,7 @@ export class RestTransport implements DraftTransport {
     input: { content: string },
   ): Promise<{ prompt_id: string; status: string }> {
     this.calls.push({ tool: "AddPrompt", args: { projectId, chapterId, ...input } });
-    const data = await this.req("POST", `/projects/${projectId}/chapters/${chapterId}/prompt`, input);
+    const data = await this.req("POST", `/projects/${projectId}/chapters/${chapterId}/prompt`, input, false);
     return { prompt_id: data.prompt_id, status: data.status };
   }
 }

@@ -21,6 +21,10 @@ const sequence = calls.map((c) => c.tool).join(" → ");
 const exported = calls.some((c) => c.tool === "ExportProject");
 const chapters = calls.filter((c) => c.tool === "AddChapter").length;
 const projectId: string | undefined = plan?.projectId;
+// The agent path (run-agent.ts) never writes plan.json — it only emits
+// mock-calls.jsonl. Detect a draft from the call log too, so a successful
+// agentic run isn't misreported as a failure.
+const createdViaLog = calls.some((c) => c.tool === "CreateProject");
 
 const lines: string[] = [];
 lines.push("## 🎬 Babou draft campaign");
@@ -29,6 +33,8 @@ if (plan?.status === "exists") {
   lines.push(`A campaign for this deploy already existed (\`${projectId}\`) — skipped to stay idempotent.`);
 } else if (projectId) {
   lines.push(`Drafted project \`${projectId}\` with **${chapters} chapter(s)**.`);
+} else if (createdViaLog) {
+  lines.push(`Drafted a project with **${chapters} chapter(s)**.`);
 } else {
   lines.push("No draft was produced.");
 }

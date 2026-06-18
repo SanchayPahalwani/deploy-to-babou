@@ -20,9 +20,11 @@ describe("RestTransport", () => {
     expect(JSON.parse(init.body as string)).toEqual({ name: "N", description: "D" });
   });
 
-  it("retries on 429 then succeeds", async () => {
+  it("retries idempotent reads (GET listProjects) on 429 then succeeds", async () => {
     let n = 0;
-    const fetchImpl = vi.fn(async () => (++n < 2 ? jsonResponse({ error: { code: "RATE_LIMIT_EXCEEDED" } }, 429) : jsonResponse({ id: "prj_ok" })));
+    const fetchImpl = vi.fn(async () =>
+      ++n < 2 ? jsonResponse({ error: { code: "RATE_LIMIT_EXCEEDED" } }, 429) : jsonResponse({ data: [{ id: "prj_ok" }] }),
+    );
     const t = new RestTransport({
       apiKey: "sk-bab-test",
       fetchImpl: fetchImpl as unknown as typeof fetch,
@@ -30,9 +32,22 @@ describe("RestTransport", () => {
       backoffMs: 1,
     });
 
-    const r = await t.createProject({ name: "N", description: "D" });
-    expect(r.id).toBe("prj_ok");
+    const projects = await t.listProjects();
+    expect(projects[0]!.id).toBe("prj_ok");
     expect(fetchImpl).toHaveBeenCalledTimes(2);
+  });
+
+  it("does NOT retry writes (createProject) on 503 — avoids duplicate creates", async () => {
+    const fetchImpl = vi.fn(async () => jsonResponse({ error: { code: "INTERNAL_ERROR" } }, 503));
+    const t = new RestTransport({
+      apiKey: "sk-bab-test",
+      fetchImpl: fetchImpl as unknown as typeof fetch,
+      maxRetries: 3,
+      backoffMs: 1,
+    });
+
+    await expect(t.createProject({ name: "N", description: "D" })).rejects.toBeInstanceOf(BabouApiError);
+    expect(fetchImpl).toHaveBeenCalledTimes(1);
   });
 
   it("throws a typed BabouApiError on 401 without retrying", async () => {

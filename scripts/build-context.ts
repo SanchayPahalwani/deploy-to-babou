@@ -67,10 +67,14 @@ let version: string | undefined;
 let pkgName = "app";
 let pkgDesc = "";
 if (existsSync("package.json")) {
-  const pkg = JSON.parse(readFileSync("package.json", "utf8"));
-  version = pkg.version;
-  pkgName = pkg.name || pkgName;
-  pkgDesc = pkg.description || "";
+  try {
+    const pkg = JSON.parse(readFileSync("package.json", "utf8"));
+    version = pkg.version;
+    pkgName = pkg.name || pkgName;
+    pkgDesc = pkg.description || "";
+  } catch {
+    /* malformed/partial package.json — keep the defaults */
+  }
 }
 
 // Merged-PR details (best effort, via gh). The merge commit subject usually
@@ -93,7 +97,10 @@ if (prNum) {
 let changelog: string | undefined;
 if (existsSync("CHANGELOG.md")) {
   const md = readFileSync("CHANGELOG.md", "utf8");
-  const block = md.match(/##\s*\[?Unreleased\]?[^\n]*\n([\s\S]*?)(?:\n##\s|\s*$)/i)?.[1];
+  // Capture the Unreleased body up to the next "## " heading (matched at a line
+  // start so an *empty* Unreleased block followed immediately by the next
+  // release heading yields an empty capture, not the next version's notes).
+  const block = md.match(/##\s*\[?Unreleased\]?[^\n]*\n([\s\S]*?)(?=\n?^##\s|$(?![\s\S]))/im)?.[1];
   if (block && block.trim()) changelog = block.trim();
 }
 

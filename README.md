@@ -61,7 +61,7 @@ Babou has no draft flag; the unit is a video Project (Project → Chapters → P
 
 1. `ExportProject` is omitted from the agent's `--allowedTools` (uncallable in headless `-p`) and listed in `--disallowedTools`.
 2. The agent's system prompt forbids it.
-3. `scripts/assert-draft.ts` fails CI if `ExportProject` ever appears in the call log.
+3. `scripts/assert-draft.ts` fails CI if `ExportProject` appears in the call log. This covers the credential-free mock/replay paths; in **live** mode the real MCP server writes no local log, so export prevention there rests on layers 1–2.
 
 ---
 

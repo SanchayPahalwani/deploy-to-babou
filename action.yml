@@ -42,7 +42,8 @@ runs:
         BABOU_API_KEY: ${{ inputs.babou-api-key }}
         PRODUCT_NAME: ${{ inputs.product-name }}
       run: |
-        npm i -g @anthropic-ai/claude-code >/dev/null 2>&1 || true
+        npm i -g @anthropic-ai/claude-code
+        command -v claude >/dev/null 2>&1 || { echo "::error::Claude Code CLI not on PATH after global install"; exit 1; }
         npx tsx scripts/run-agent.ts
 
     - name: Draft campaign (deterministic REST/replay)
