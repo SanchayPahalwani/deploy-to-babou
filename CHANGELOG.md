@@ -14,6 +14,8 @@ both a changelog and the marketing source of truth.
 - Mock Babou MCP server so the full contract — and a real agent run — are
   verifiable with **zero credentials**.
 - Never-export draft invariant, enforced in CI by `assert-draft`.
+- Idempotent re-runs: a re-deploy of the same commit is a verified no-op, never a
+  duplicate campaign (matched by a `shipcast:sha=<commit>` marker).
 
 ## [0.1.0] - 2026-06-18
 
