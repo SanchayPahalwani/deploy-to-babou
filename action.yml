@@ -9,7 +9,11 @@ inputs:
     required: false
     default: ""
   anthropic-api-key:
-    description: "Anthropic API key for the agent. If empty, falls back to the deterministic REST path."
+    description: "Anthropic API key for the agent (bills the API account). If empty and no OAuth token, falls back to the deterministic REST path."
+    required: false
+    default: ""
+  claude-code-oauth-token:
+    description: "Claude Code OAuth token from `claude setup-token` (draws on a Claude subscription, not API credits). Alternative to anthropic-api-key for the agent path."
     required: false
     default: ""
   product-name:
@@ -34,11 +38,15 @@ runs:
         PRODUCT_NAME: ${{ inputs.product-name }}
       run: npx tsx scripts/build-context.ts
 
+    # Agent path runs when EITHER agent credential is present. The Claude CLI
+    # picks up whichever is set; CLAUDE_CODE_OAUTH_TOKEN uses a subscription,
+    # ANTHROPIC_API_KEY bills the API account (and takes precedence if both set).
     - name: Draft campaign (agent → Babou MCP)
-      if: inputs.anthropic-api-key != ''
+      if: inputs.anthropic-api-key != '' || inputs.claude-code-oauth-token != ''
       shell: bash
       env:
         ANTHROPIC_API_KEY: ${{ inputs.anthropic-api-key }}
+        CLAUDE_CODE_OAUTH_TOKEN: ${{ inputs.claude-code-oauth-token }}
         BABOU_API_KEY: ${{ inputs.babou-api-key }}
         PRODUCT_NAME: ${{ inputs.product-name }}
       run: |
@@ -47,7 +55,7 @@ runs:
         npx tsx scripts/run-agent.ts
 
     - name: Draft campaign (deterministic REST/replay)
-      if: inputs.anthropic-api-key == ''
+      if: inputs.anthropic-api-key == '' && inputs.claude-code-oauth-token == ''
       shell: bash
       env:
         BABOU_API_KEY: ${{ inputs.babou-api-key }}

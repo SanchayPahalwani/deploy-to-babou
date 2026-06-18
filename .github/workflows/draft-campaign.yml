@@ -30,5 +30,9 @@ jobs:
         uses: ./
         with:
           babou-api-key: ${{ secrets.BABOU_API_KEY }}
+          # Set EITHER secret to enable the agent path. CLAUDE_CODE_OAUTH_TOKEN
+          # (from `claude setup-token`) draws on a Claude subscription instead of
+          # metered API credits. With neither set, CI runs the deterministic path.
           anthropic-api-key: ${{ secrets.ANTHROPIC_API_KEY }}
+          claude-code-oauth-token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           product-name: deploy-to-babou

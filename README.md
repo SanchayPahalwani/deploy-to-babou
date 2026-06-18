@@ -50,10 +50,23 @@ The agent's only difference between dry-run and live is **which MCP server it po
 | Mode | Needs | MCP target | Proves |
 | --- | --- | --- | --- |
 | **REPLAY** (CI default) | nothing | in-memory mock (`run-rest.ts`) | the call contract, offline |
-| **AGENT vs MOCK** | `ANTHROPIC_API_KEY` | local mock MCP (stdio) | the **agent** really drafts it — no Babou key |
-| **LIVE** | `BABOU_API_KEY` | `https://api.babou.ai/mcp` (http) | a real `prj_…` draft in Babou's dashboard |
+| **AGENT vs MOCK** | a Claude credential (below) | local mock MCP (stdio) | the **agent** really drafts it — no Babou key |
+| **LIVE** | + `BABOU_API_KEY` | `https://api.babou.ai/mcp` (http) | a real `prj_…` draft in Babou's dashboard |
 
-To go live, set the repo secrets `ANTHROPIC_API_KEY` and `BABOU_API_KEY`. The Action then routes to the live MCP server automatically.
+To go live, set the repo secrets (a Claude credential + `BABOU_API_KEY`). The Action then routes to the live MCP server automatically.
+
+### Auth & cost — who can run it, what it bills
+
+The agent needs one Claude credential, set as a **repo secret**. Two options, in precedence order:
+
+| Secret | Bills | Get it |
+| --- | --- | --- |
+| `ANTHROPIC_API_KEY` | metered **API** credits | console.anthropic.com |
+| `CLAUDE_CODE_OAUTH_TOKEN` | your **Claude subscription** (Pro/Max) | `claude setup-token` (1-yr token) |
+
+Set **either** (if both are set, the API key wins). The subscription token is the cheaper choice — a merge draws on your flat-rate plan instead of API credits. Locally, no secret is needed at all: `npm run agent` uses your logged-in Claude Code.
+
+**Can a stranger run up my bill? No.** This workflow triggers only on `push` to `main` and `workflow_dispatch` — never `pull_request`/`pull_request_target`. Fork pull requests [don't receive repo secrets](https://docs.github.com/en/actions/security-guides/using-secrets-in-github-actions#using-secrets-in-a-workflow) and don't trigger those events, and `workflow_dispatch` requires **write access**. So only you (and collaborators you grant write access) can trigger a run that uses the key. For a hard ceiling regardless, set a spend limit on the key (or use the subscription token) and prefer a dedicated key you can rotate.
 
 ### "Draft" = create everything, never Export
 
