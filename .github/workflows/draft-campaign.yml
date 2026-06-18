@@ -1,0 +1,34 @@
+name: Draft Babou Campaign
+
+# Every merge to main is a "deploy". This drafts a Babou campaign about what
+# shipped — agentically when ANTHROPIC_API_KEY is present, deterministically
+# otherwise — and never publishes. Add [skip-babou] to a commit to skip.
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pull-requests: read
+
+concurrency:
+  group: draft-babou-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  draft:
+    if: ${{ !contains(github.event.head_commit.message, '[skip-babou]') }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # full history so we can diff against the previous sha
+
+      - name: Draft a Babou campaign from this deploy
+        uses: ./
+        with:
+          babou-api-key: ${{ secrets.BABOU_API_KEY }}
+          anthropic-api-key: ${{ secrets.ANTHROPIC_API_KEY }}
+          product-name: deploy-to-babou

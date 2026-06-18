@@ -1,0 +1,12 @@
+node_modules/
+dist/
+*.log
+context.json
+CONTEXT.md
+plan.json
+mock-calls.jsonl
+smoke-calls.jsonl
+agent-output.json
+.env
+.DS_Store
+docs/

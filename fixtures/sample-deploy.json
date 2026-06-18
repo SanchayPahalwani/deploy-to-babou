@@ -1,0 +1,29 @@
+{
+  "product": { "name": "deploy-to-babou", "tagline": "every merge drafts your launch video" },
+  "repo": "SanchayPahalwani/deploy-to-babou",
+  "sha": "f00dcafe1234567890abcdef1234567890abcdef",
+  "shortSha": "f00dcaf",
+  "ref": "refs/heads/main",
+  "version": "0.1.0",
+  "pr": {
+    "number": 1,
+    "title": "Agentic draft pipeline: merge -> Babou draft campaign",
+    "body": "Wires the deploy to Babou's MCP server. On merge, a headless agent drafts a 3-chapter campaign (What shipped / Why it matters / Try it) and deliberately leaves Export to a human. Ships with a mock MCP server so the whole contract is verifiable with zero credentials."
+  },
+  "commit": {
+    "subject": "feat: agentic draft pipeline (#1)",
+    "body": "Adds the orchestrator, a mock Babou MCP server, contract tests, and the composite GitHub Action."
+  },
+  "changedFiles": [
+    "src/orchestrator.ts",
+    "src/plan.ts",
+    "src/transport.ts",
+    "agent/mock-babou-mcp.ts",
+    "agent/system-prompt.md",
+    ".github/workflows/draft-campaign.yml",
+    "action.yml",
+    "test/contract.test.ts"
+  ],
+  "diffStat": " 8 files changed, 642 insertions(+)",
+  "changelog": "### Added\n- Agentic merge->draft pipeline driving Babou's MCP tools.\n- Mock MCP server + contract test: full call shape verified with zero credentials.\n- Never-export draft invariant enforced in CI."
+}

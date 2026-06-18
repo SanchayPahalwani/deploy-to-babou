@@ -1,0 +1,87 @@
+# deploy-to-babou
+
+**Every merge drafts a [Babou](https://babou.ai) launch campaign — agentically, through Babou's own MCP server. Export stays a human's call.**
+
+When you merge to `main`, a GitHub Action turns the deploy (PR, commit, diff, changelog) into a **draft** Babou video campaign: it creates a Project, adds three chapters (_What shipped_ / _Why it matters_ / _Try it_), and writes a prompt for each — then deliberately **stops before Export**, leaving a draft in the dashboard for a human to review and publish.
+
+The integration is an **agent**, not a hand-written API client: a headless `claude -p` reads the deploy context and drives Babou's MCP tools itself. And the whole thing is **verifiable with zero credentials** before any key exists — a bundled mock MCP server lets a real agent run offline, and a CI check proves the draft was never exported.
+
+> Built as a work sample for Babou. It dogfoods the idea: this repo's own deploys draft this repo's launch campaign.
+
+---
+
+## Quickstart (no credentials needed)
+
+```bash
+npm install
+npm run verify     # typecheck + tests + offline draft + draft-invariant assertion
+```
+
+`verify` is green on a fresh clone with **no API keys**. It runs the deterministic pipeline against an in-memory mock and asserts the exact Babou call shape (and that `ExportProject` was never called).
+
+### See a real agent draft a campaign (needs only an Anthropic key)
+
+```bash
+npm run smoke:mcp   # prove the mock MCP server speaks MCP over stdio (5 tools)
+npm run agent       # a real `claude -p` agent drafts the campaign via the mock MCP server
+npm run assert      # verify the agent's actual calls satisfy the draft invariant
+```
+
+No **Babou** key required — the agent talks to the local mock. With `ANTHROPIC_API_KEY` (or a logged-in Claude Code), the agent genuinely chooses the chapter structure and writes the copy.
+
+---
+
+## How it works
+
+```
+merge to main
+   └─ GitHub Action (action.yml)
+        ├─ scripts/build-context.ts   PR + commit + diff + CHANGELOG  →  CONTEXT.md
+        ├─ the agent (claude -p)       drives Babou MCP tools:
+        │     ListProjects → CreateProject → AddChapter ×3 → AddPrompt ×3
+        │     (ExportProject is NOT allow-listed — uncallable)
+        └─ scripts/assert-draft.ts     fails CI if anything was exported
+```
+
+### The mock → live flip is one config change
+
+The agent's only difference between dry-run and live is **which MCP server it points at**:
+
+| Mode | Needs | MCP target | Proves |
+| --- | --- | --- | --- |
+| **REPLAY** (CI default) | nothing | in-memory mock (`run-rest.ts`) | the call contract, offline |
+| **AGENT vs MOCK** | `ANTHROPIC_API_KEY` | local mock MCP (stdio) | the **agent** really drafts it — no Babou key |
+| **LIVE** | `BABOU_API_KEY` | `https://api.babou.ai/mcp` (http) | a real `prj_…` draft in Babou's dashboard |
+
+To go live, set the repo secrets `ANTHROPIC_API_KEY` and `BABOU_API_KEY`. The Action then routes to the live MCP server automatically.
+
+### "Draft" = create everything, never Export
+
+Babou has no draft flag; the unit is a video Project (Project → Chapters → Prompts → Export). So a draft here is **structural**: build the Project + Chapters + Prompts and never call `ExportProject`. This matches Babou's own documented _Review & Refine_ step before Export. The invariant is enforced three ways:
+
+1. `ExportProject` is omitted from the agent's `--allowedTools` (uncallable in headless `-p`) and listed in `--disallowedTools`.
+2. The agent's system prompt forbids it.
+3. `scripts/assert-draft.ts` fails CI if `ExportProject` ever appears in the call log.
+
+---
+
+## Layout
+
+| Path | What |
+| --- | --- |
+| `src/plan.ts` | Pure, deterministic deploy → campaign plan (snapshot-tested). |
+| `src/transport.ts` | `RestTransport` (real REST, retry/backoff) + `MockTransport` (deterministic). |
+| `src/orchestrator.ts` | The draft pipeline; idempotent; never exports. |
+| `agent/mock-babou-mcp.ts` | Local MCP server mirroring Babou's tools — the credential-free stand-in. |
+| `agent/system-prompt.md` | The agent's guardrails. |
+| `scripts/run-agent.ts` | Launches the headless agent (mock or live). |
+| `scripts/assert-draft.ts` | The machine-checkable definition of a correct draft. |
+| `action.yml` + `.github/workflows/` | The composite Action and the deploy trigger. |
+
+## Idempotency
+
+Each project description embeds `shipcast:sha=<commit>`. Before drafting, the pipeline (and the agent) `ListProjects` and skip if a campaign for this exact deploy already exists — so re-merges and re-runs don't pile up duplicates.
+
+## Verified against
+
+Babou's live docs (`docs.babou.ai`): REST base `https://api.babou.ai/api/v1`, `Bearer sk-bab-…` auth, and the MCP tools `CreateProject` / `ListProjects` / `AddChapter` / `AddPrompt` / `ExportProject`. Nothing here invents an endpoint or field beyond that surface.

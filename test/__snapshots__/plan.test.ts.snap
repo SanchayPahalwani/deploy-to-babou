@@ -1,0 +1,28 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`buildCampaignPlan > is deterministic and matches the snapshot 1`] = `
+{
+  "chapters": [
+    {
+      "duration": 20,
+      "name": "What shipped",
+      "prompt": "20-second opener announcing what just shipped in deploy-to-babou v0.1.0. 0-3s: product logo resolves from the brand catalog. 3-15s: headline "Agentic draft pipeline: merge -> Babou draft campaign" on screen with the key change. Anchor on the product surface — pull real UI / release notes, not generic stock. Touched areas: src (3), agent (2), .github (1), action.yml (1), test (1).",
+    },
+    {
+      "duration": 30,
+      "name": "Why it matters",
+      "prompt": "30-second value beat: why this change matters to the user. Translate the release into one concrete user benefit; one idea per 5-7s beat. Ground the benefit in the changelog: ### Added - Agentic merge->draft pipeline driving Babou's MCP tools. - Mock MCP server + contract test: full call shape verified with zero credentials. - Never-export draft invariant enforced in CI.. Resolve colors and typography from the brand catalog; keep copy tight.",
+    },
+    {
+      "duration": 20,
+      "name": "Try it",
+      "prompt": "20-second close with a clear call to action for deploy-to-babou. 15-18s: CTA button styled to match the product's primary button. End card: "deploy-to-babou — every merge drafts your launch video".",
+    },
+  ],
+  "idempotencyKey": "shipcast:sha=f00dcafe1234567890abcdef1234567890abcdef",
+  "project": {
+    "description": "Auto-drafted launch campaign for deploy-to-babou v0.1.0. Source: SanchayPahalwani/deploy-to-babou@f00dcaf. Status: DRAFT (not exported) — pending human review. shipcast:sha=f00dcafe1234567890abcdef1234567890abcdef",
+    "name": "deploy-to-babou — Agentic draft pipeline: merge -> Babou draft campaign",
+  },
+}
+`;
